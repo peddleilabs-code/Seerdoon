@@ -327,10 +327,27 @@ export const handler = router({
         ? (body.items.slice(0, 20) as Body[])
         : [];
       if (!items.length) return error('Your bag is empty.', 400);
-      const total = items.reduce(
-        (sum, item) => sum + Math.max(0, safeNumber(item.price) || 0),
-        0
-      );
+
+      // Never trust prices or product names supplied by the browser.
+      const catalogue = await loadProducts();
+      const verifiedItems: Array<{
+        productId: string;
+        name: string;
+        price: number;
+      }> = [];
+      for (const item of items) {
+        const productId = safeText(item.productId, 100);
+        const product = catalogue.find(entry => entry.id === productId);
+        if (!product)
+          return error('A product in your bag is no longer available.', 409);
+        const price = safeNumber(product.price);
+        const name = safeText(product.name, 120);
+        if (!name || !Number.isFinite(price) || price <= 0)
+          return error('A product in your bag has invalid catalogue pricing.', 409);
+        verifiedItems.push({ productId, name, price });
+      }
+
+      const total = verifiedItems.reduce((sum, item) => sum + item.price, 0);
       if (!Number.isFinite(total) || total <= 0 || total > 100000)
         return error('Order total is invalid.', 400);
       const names = await secrets.listSecretNames();
@@ -408,10 +425,7 @@ export const handler = router({
         amount: total,
         currency: 'USD',
         status: 'created',
-        items: items.map(item => ({
-          name: safeText(item.name, 120),
-          price: safeNumber(item.price),
-        })),
+        items: verifiedItems,
         createdAt: new Date().toISOString(),
       };
       const [id] = await db.add('orders', [record]);
