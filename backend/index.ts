@@ -422,7 +422,8 @@ export const handler = router({
         );
       return json({ orderId: order.id, approvalUrl, status: 'created' });
     },
-  ],  'POST /api/paypal/capture-order': [
+  ],
+  'POST /api/paypal/capture-order': [
     requireAuth(),
     async ctx => {
       const orderId = safeText((ctx.body as Body)?.orderId, 80);
@@ -521,15 +522,16 @@ export const handler = router({
         );
       }
 
+      const { id: localOrderRecordId, ...storedOrder } = localOrder;
       const updatedOrder = {
-        ...localOrder,
+        ...storedOrder,
         status: 'COMPLETED',
         captureId: capture.id || null,
         capturedAt: new Date().toISOString(),
         paypalStatus: captureData.status,
       };
       const [saved] = await db.tx.update('orders', [
-        { id: localOrder.id, record: updatedOrder },
+        { id: localOrderRecordId, record: updatedOrder },
       ]);
       if (!saved)
         return error(
