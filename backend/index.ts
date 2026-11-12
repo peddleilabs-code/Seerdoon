@@ -422,5 +422,129 @@ export const handler = router({
         );
       return json({ orderId: order.id, approvalUrl, status: 'created' });
     },
+  ],  'POST /api/paypal/capture-order': [
+    requireAuth(),
+    async ctx => {
+      const orderId = safeText((ctx.body as Body)?.orderId, 80);
+      if (!orderId) return error('PayPal order ID is required.', 400);
+
+      const ownedOrders = await listOwned('orders', ctx.user!.userId, 200);
+      const localOrder = ownedOrders.find(
+        item => item.paypalOrderId === orderId
+      );
+      if (!localOrder) return error('Order was not found for this account.', 404);
+      if (localOrder.status === 'COMPLETED') {
+        return json({
+          orderId,
+          status: 'COMPLETED',
+          captureId: localOrder.captureId || null,
+          alreadyCaptured: true,
+        });
+      }
+
+      const names = await secrets.listSecretNames();
+      if (
+        !names.includes('PAYPAL_CLIENT_ID') ||
+        !names.includes('PAYPAL_CLIENT_SECRET')
+      )
+        return error('PayPal is not configured yet.', 503);
+      const clientId = await secrets.readSecret('PAYPAL_CLIENT_ID');
+      const clientSecret = await secrets.readSecret('PAYPAL_CLIENT_SECRET');
+      const authValue = Buffer.from(clientId + ':' + clientSecret).toString(
+        'base64'
+      );
+      const tokenResponse = await fetch(
+        'https://api-m.sandbox.paypal.com/v1/oauth2/token',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: 'Basic ' + authValue,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: 'grant_type=client_credentials',
+        }
+      );
+      if (!tokenResponse.ok)
+        return error('PayPal authentication failed. Check the Sandbox credentials.', 502);
+      const tokenData = (await tokenResponse.json()) as {
+        access_token: string;
+      };
+      const captureResponse = await fetch(
+        'https://api-m.sandbox.paypal.com/v2/checkout/orders/' +
+          encodeURIComponent(orderId) +
+          '/capture',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: 'Bearer ' + tokenData.access_token,
+            'Content-Type': 'application/json',
+            'PayPal-Request-Id': 'seerdoon-' + orderId,
+          },
+          body: '{}',
+        }
+      );
+      const captureData = (await captureResponse.json().catch(() => ({}))) as {
+        id?: string;
+        status?: string;
+        message?: string;
+        name?: string;
+        purchase_units?: Array<{
+          payments?: {
+            captures?: Array<{
+              id?: string;
+              status?: string;
+              amount?: { currency_code?: string; value?: string };
+            }>;
+          };
+        }>;
+      };
+      if (!captureResponse.ok) {
+        return error(
+          safeText(captureData.message, 300) ||
+            'PayPal could not capture this approved order.',
+          502
+        );
+      }
+
+      const capture = captureData.purchase_units?.[0]?.payments?.captures?.[0];
+      const capturedAmount = Number(capture?.amount?.value);
+      if (
+        captureData.status !== 'COMPLETED' ||
+        capture?.status !== 'COMPLETED' ||
+        capture?.amount?.currency_code !== localOrder.currency ||
+        !Number.isFinite(capturedAmount) ||
+        Math.abs(capturedAmount - safeNumber(localOrder.amount)) > 0.001
+      ) {
+        return error(
+          'PayPal did not confirm a completed capture for the expected amount. The order remains unfulfilled.',
+          409
+        );
+      }
+
+      const updatedOrder = {
+        ...localOrder,
+        status: 'COMPLETED',
+        captureId: capture.id || null,
+        capturedAt: new Date().toISOString(),
+        paypalStatus: captureData.status,
+      };
+      const [saved] = await db.tx.update('orders', [
+        { id: localOrder.id, record: updatedOrder },
+      ]);
+      if (!saved)
+        return error(
+          'PayPal confirmed the capture, but the local order status could not be updated. Contact support before retrying.',
+          500
+        );
+
+      return json({
+        orderId,
+        status: 'COMPLETED',
+        captureId: capture.id || null,
+        amount: capturedAmount,
+        currency: capture.amount?.currency_code,
+      });
+    },
   ],
+
 });
