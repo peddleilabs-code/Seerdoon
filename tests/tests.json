@@ -1,0 +1,89 @@
+[
+  {
+    "name": "Restore a signed-in customer and load their private fit profile",
+    "sanity": true,
+    "viewport": "desktop",
+    "covers": [
+      "secure sign-in and session restoration",
+      "customer profile loading",
+      "private measurement history",
+      "marketplace discovery"
+    ],
+    "description": "Verifies a signed-in customer sees their own profile and marketplace without exposing another account's fit data.",
+    "steps": [
+      "Sign in as a customer account",
+      "Open My fit profile",
+      "Open Discover"
+    ],
+    "expected": "The customer's profile and only their saved measurements are shown, and the marketplace catalogue loads."
+  },
+  {
+    "name": "Estimate and save a reviewed body measurement profile",
+    "viewport": "desktop",
+    "covers": [
+      "front and side image upload",
+      "AI measurement estimation",
+      "measurement confidence and limitations",
+      "manual measurement correction",
+      "measurement persistence"
+    ],
+    "description": "Verifies a customer can submit both scan views, review and correct estimates, save the profile and see it again.",
+    "steps": [
+      "Open Body scan and upload a front and side image",
+      "Request an estimate",
+      "Edit one measurement and save the profile",
+      "Open My fit profile"
+    ],
+    "expected": "An estimate with confidence and limitations is shown, the corrected value is saved, and the latest profile appears in My fit profile."
+  },
+  {
+    "name": "Get personal styling suggestions from the AI stylist",
+    "viewport": "desktop",
+    "covers": [
+      "AI stylist request",
+      "catalogue-grounded outfit suggestions",
+      "user-visible AI response"
+    ],
+    "description": "Verifies the stylist returns a useful response to a customer's occasion or outfit request.",
+    "steps": [
+      "Open AI stylist",
+      "Enter a request for a smart-casual outfit",
+      "Ask for styling ideas"
+    ],
+    "expected": "A readable styling response appears and does not claim unverified product fit or stock."
+  },
+  {
+    "name": "Create a vendor workspace and publish a product",
+    "viewport": "desktop",
+    "covers": [
+      "vendor registration",
+      "vendor role separation",
+      "vendor product listing",
+      "product validation"
+    ],
+    "description": "Verifies a customer can create a vendor workspace and publish a valid catalogue item while invalid listing data is rejected.",
+    "steps": [
+      "Open Sell on Seerdoon and complete the vendor form",
+      "Open Vendor studio",
+      "Publish a product with a name, brand and price"
+    ],
+    "expected": "The account becomes a vendor, the Vendor studio appears, and the new listing is added to the marketplace."
+  },
+  {
+    "name": "Review a bag and start PayPal checkout",
+    "viewport": "mobile",
+    "covers": [
+      "responsive mobile shopping",
+      "cart review and item removal",
+      "PayPal order creation",
+      "external payment approval handoff"
+    ],
+    "description": "Verifies a customer can review their bag and begin a PayPal approval flow without charging before approval.",
+    "steps": [
+      "Add a product to the bag",
+      "Open the bag and review the total",
+      "Continue with PayPal"
+    ],
+    "expected": "A PayPal approval page opens for the order, or a clear error is shown if PayPal is unavailable; payment is not represented as completed."
+  }
+]
