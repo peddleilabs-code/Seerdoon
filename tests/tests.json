@@ -70,20 +70,24 @@
     "expected": "The account becomes a vendor, the Vendor studio appears, and the new listing is added to the marketplace."
   },
   {
-    "name": "Review a bag and start PayPal checkout",
+    "name": "Complete PayPal Sandbox checkout after buyer approval",
     "viewport": "mobile",
     "covers": [
       "responsive mobile shopping",
       "cart review and item removal",
-      "PayPal order creation",
-      "external payment approval handoff"
+      "PayPal Sandbox order creation",
+      "buyer approval redirect and return handling",
+      "server-side payment capture",
+      "captured amount and currency verification",
+      "completed order persistence"
     ],
-    "description": "Verifies a customer can review their bag and begin a PayPal approval flow without charging before approval.",
+    "description": "Verifies an authenticated customer can create a PayPal Sandbox order, approve it, return to Seerdoon, and have the backend capture and verify the payment before confirming the order.",
     "steps": [
-      "Add a product to the bag",
-      "Open the bag and review the total",
-      "Continue with PayPal"
+      "Sign in with a customer account and add a catalogue product to the bag",
+      "Open the bag and continue to PayPal",
+      "Approve the order with a PayPal Sandbox buyer account",
+      "Allow PayPal to return to Seerdoon"
     ],
-    "expected": "A PayPal approval page opens for the order, or a clear error is shown if PayPal is unavailable; payment is not represented as completed."
+    "expected": "Seerdoon sends the approved order ID to its authenticated backend. The backend captures it through PayPal Sandbox, checks that the order and capture are COMPLETED and that the captured USD amount matches the stored order, then saves the capture ID and confirmation status. If capture cannot be verified, Seerdoon must not report the order as paid."
   }
 ]
