@@ -79,9 +79,10 @@
       "buyer approval redirect and return handling",
       "server-side payment capture",
       "captured amount and currency verification",
-      "completed order persistence"
+      "completed order persistence",
+      "server-side catalogue price validation"
     ],
-    "description": "Verifies an authenticated customer can create a PayPal Sandbox order, approve it, return to Seerdoon, and have the backend capture and verify the payment before confirming the order.",
+    "description": "Verifies an authenticated customer can create a PayPal Sandbox order, approve it, return to Seerdoon, and have the backend capture and verify the payment before confirming the order. The backend must use catalogue prices rather than trusting browser-supplied prices.",
     "steps": [
       "Sign in with a customer account and add a catalogue product to the bag",
       "Open the bag and continue to PayPal",
