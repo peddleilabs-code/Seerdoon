@@ -182,6 +182,51 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (loading || !user) return;
+    const params = new URLSearchParams(window.location.search);
+    const paymentState = params.get('paypal');
+
+    if (paymentState === 'cancel') {
+      setNotice('PayPal checkout was cancelled. No payment was captured.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (paymentState !== 'return') return;
+    const orderId = params.get('token') || params.get('orderId');
+    if (!orderId) {
+      setNotice('PayPal returned without an order reference. Please contact support.');
+      return;
+    }
+
+    let active = true;
+    setBusy(true);
+    api
+      .post('/api/paypal/capture-order', { orderId })
+      .then(response => {
+        if (!active) return;
+        if (response.data.status === 'COMPLETED') {
+          setCart([]);
+          setNotice('Payment completed successfully. Your order has been confirmed.');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+          setNotice('PayPal has not confirmed the payment yet. Your order is not marked as paid.');
+        }
+      })
+      .catch((e: any) => {
+        if (!active) return;
+        setNotice(e?.message || 'We could not verify the PayPal payment. Please contact support before trying again.');
+      })
+      .finally(() => {
+        if (active) setBusy(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [loading, user]);
+
   const filtered = useMemo(
     () =>
       products.filter(p =>
